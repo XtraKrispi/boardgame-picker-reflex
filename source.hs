@@ -69,21 +69,14 @@ gameWidget game@Game {
 
 gamesWidget :: MonadWidget t m => Text -> [Game] -> m (Event t Game)
 gamesWidget className games =
-  elClass className "div" $ do
+  elClass "div" className $ do
     es <- mapM gameWidget games
     return $ leftmost es
 
-turnEventIntoWidgets :: MonadWidget t m => Text -> Event t [Game] -> m () -- (Event t Game)
+turnEventIntoWidgets :: MonadWidget t m => Text -> Event t [Game] -> m (Event t Game)
 turnEventIntoWidgets className evt = do
-  events <- fmap (gamesWidget className) evt
-  return ()
-  -- do
-
-  -- dynList <- holdDyn ([] :: [Game]) evt
-  -- -- mapDyn (gamesWidget className) dynList
-  -- -- Dynamic t [Game] -> m (Event t Game)
-
-  -- return ()
+  dynEvent <- widgetHold (elClass "div" className $ return never) $ gamesWidget className <$> evt
+  return $ (switch . current) dynEvent
 
 buttonWithAttr :: MonadWidget t m => Map Text Text -> m a -> m (Event t ())
 buttonWithAttr attrs child = do
@@ -138,7 +131,6 @@ main = mainWidget $ elClass "div" "container" $ do
                 el "h3" $ text "Search"
                 evt <- searchBarAndButton
                 onResp <- getCollection evt
-                turnEventIntoWidgets "test" onResp
-                dynList <- holdDyn "" (fmap (pack . show) onResp)
-                dynText dynList
+                onClick <- turnEventIntoWidgets "test" onResp
+                holdDyn "" (fmap (pack . show) onClick) >>= dynText
                 return ()
