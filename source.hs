@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE RecursiveDo           #-}
 
+import           Data.Aeson
 import qualified Data.Dependent.Map as DMap
 import           Data.Map
 import           Data.Text
@@ -10,7 +10,7 @@ import           Reflex
 import           Reflex.Dom
 
 newtype GameId = GameId Int
-  deriving (Eq)
+  deriving (Eq, Show)
 
 data Game = Game {
    gameId            :: GameId
@@ -23,7 +23,21 @@ data Game = Game {
   ,gameYear          :: Int
   ,gameAvgRating     :: Double
   ,gameRank          :: Int
-} deriving (Eq)
+} deriving (Eq, Show)
+
+
+instance FromJSON Game where
+  parseJSON (Object v) = Game <$>
+    fmap GameId (v .: "gameId") <*>
+    v .: "name" <*>
+    v .: "image" <*>
+    v .: "thumbnail" <*>
+    v .: "minPlayers" <*>
+    v .: "maxPlayers" <*>
+    v .: "playingTime" <*>
+    v .: "yearPublished" <*>
+    v .: "averageRating" <*>
+    v .: "rank"
 
 div' :: MonadWidget t m => m a -> m a
 div' = el "div"
@@ -52,6 +66,24 @@ gameWidget game@Game {
       div' $ text $ pack ("Avg Rating: " ++ show avgRating)
   let clickEvent = domEvent Click gameDiv
   return $ fmap (const game) clickEvent
+
+gamesWidget :: MonadWidget t m => Text -> [Game] -> m (Event t Game)
+gamesWidget className games =
+  elClass className "div" $ do
+    es <- mapM gameWidget games
+    return $ leftmost es
+
+turnEventIntoWidgets :: MonadWidget t m => Text -> Event t [Game] -> m () -- (Event t Game)
+turnEventIntoWidgets className evt = do
+  events <- fmap (gamesWidget className) evt
+  return ()
+  -- do
+
+  -- dynList <- holdDyn ([] :: [Game]) evt
+  -- -- mapDyn (gamesWidget className) dynList
+  -- -- Dynamic t [Game] -> m (Event t Game)
+
+  -- return ()
 
 buttonWithAttr :: MonadWidget t m => Map Text Text -> m a -> m (Event t ())
 buttonWithAttr attrs child = do
@@ -84,6 +116,17 @@ searchBarAndButton =
     let submitEvent = keypress Enter searchBar
     return $ tagPromptlyDyn (_textInput_value searchBar) $ leftmost [buttonClick, submitEvent]
 
+collectionUrlBase :: Text
+collectionUrlBase = "https://bgg-json.azurewebsites.net/collection/"
+
+getCollection :: MonadWidget t m => Event t Text -> m (Event t [Game])
+getCollection e =
+  let modifiedEvent = fmap (Data.Text.append collectionUrlBase) e
+      resultFunction (Just games) = games
+      resultFunction Nothing      = []
+  in do
+       eventResult <- getAndDecode modifiedEvent
+       return $ fmap resultFunction eventResult
 
 main = mainWidget $ elClass "div" "container" $ do
     el "h1" $ text "Board Game Picker"
@@ -94,6 +137,8 @@ main = mainWidget $ elClass "div" "container" $ do
             elClass "div" "col-sm-6" $ do
                 el "h3" $ text "Search"
                 evt <- searchBarAndButton
-                dyn <- holdDyn "" evt
-                dynText dyn
+                onResp <- getCollection evt
+                turnEventIntoWidgets "test" onResp
+                dynList <- holdDyn "" (fmap (pack . show) onResp)
+                dynText dynList
                 return ()
