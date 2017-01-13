@@ -1,0 +1,47 @@
+.results-area {
+  margin-top: 20px;
+}
+
+.search-results, .available-games {
+  max-height: 500px;
+  overflow: auto;
+}
+
+
+.search-results .game, .available-games .game {
+  margin: 20px;
+  box-sizing: border-box;
+}
+
+.search-results .game:hover {
+  background-color: lightblue;
+  cursor: pointer;
+}
+
+.search-results .game.selected {
+  background-color: lightblue;
+}
+
+.search-results .game .thumb, .available-games .game .thumb, .results-area .game .thumb { 
+  display: inline-block;
+  margin-right: 10px;
+  }
+
+.search-results .game .thumb .img, .available-games .game .thumb .img, .results-area .game .thumb .img {  
+  max-width: 100px;
+}
+
+.search-results .game .description, .available-games .game .description, .results-area .game .description {
+  display: inline-block;
+  vertical-align: top;
+}
+
+.available-games .remove-game {
+  float: right;
+  margin-right: 20px;
+  cursor: pointer;
+}
+
+.option-area {
+  margin-top: 20px;
+}
